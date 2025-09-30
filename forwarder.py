@@ -1,25 +1,21 @@
-import os, requests
+import os, requests, sys
 from telethon import events
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 
+# stdout unbuffered, damit Logs sofort erscheinen
+sys.stdout.reconfigure(line_buffering=True)
+
+# --- ENV ---
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
-
 RAILWAY_HOST = os.getenv("RAILWAY_HOST", "https://a1click-production.up.railway.app").rstrip("/")
 AUTH_TOKEN   = os.getenv("AUTH_TOKEN", "")
-
-CHAT_ID    = os.getenv("CHAT_ID", "")
-CHAT_TITLE = os.getenv("CHAT_TITLE", "")
+CHAT_ID      = os.getenv("CHAT_ID", "")      # z.B. 6329795996 (DM mit Bot)
+CHAT_TITLE   = os.getenv("CHAT_TITLE", "")   # leer lassen, wenn CHAT_ID gesetzt ist
 
 client = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
-
-# === Chat-ID Finder ===
-async def list_dialogs():
-    print("📋 Alle Dialoge/Chats:")
-    async for dialog in client.iter_dialogs():
-        print(f"{dialog.id} | {dialog.title or dialog.name or dialog.entity.username}")
 
 def match_chat(e):
     if CHAT_ID and str(e.chat_id) != str(CHAT_ID):
@@ -45,12 +41,21 @@ async def handler(e):
                 "msg_id": e.id,
                 "date": str(e.date)
             },
-            timeout=8
+            timeout=8  # Route antwortet sofort
         )
+        print("→ forwarded to Approver")
     except Exception as ex:
         print("Webhook error:", ex)
 
-client.start()
-client.loop.run_until_complete(list_dialogs())  # 👈 IDs ausgeben
-print("Listening…")
-client.run_until_disconnected()
+def main():
+    print("Starting forwarder…")
+    client.start()
+    print("Listening…")  # <- diese Zeile MUSS im Log erscheinen
+    client.run_until_disconnected()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("Fatal error:", e)
+        raise
