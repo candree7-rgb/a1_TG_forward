@@ -24,28 +24,24 @@ DEBOUNCE_SECONDS = int(os.getenv("DEBOUNCE_SECONDS", "3"))
 client = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 
 def match_chat(e):
-    # 1) Komma-liste von IDs/Usernames (z.B. -100..., @AlgosoneBot)
     if CHAT_IDS:
         cid = str(e.chat_id)
         title = getattr(e.chat, "title", "") or getattr(e.chat, "first_name", "")
         for x in CHAT_IDS:
             if x.startswith("@"):
-                # Username-Vergleich über Titel/Name (bei Bots/öffentlichen Kanälen oft identisch)
                 if title == x.lstrip("@"):
                     return True
             elif x == cid:
                 return True
         return False
-    # 2) Einzelne ID
     if CHAT_ID and str(e.chat_id) != str(CHAT_ID):
         return False
-    # 3) Titel/Name
     if CHAT_TITLE:
         c = e.chat
         t = getattr(c, "title", "")
         f = getattr(c, "first_name", "")
         return (t == CHAT_TITLE) or (f == CHAT_TITLE)
-    return True  # kein Filter gesetzt -> alle (nicht empfohlen)
+    return True
 
 _last_ts = 0.0
 
@@ -72,7 +68,6 @@ async def handler(e):
             text = f"Approve → {js}"
         except Exception:
             pass
-        # Optional: Ergebnis zurück ins TG antworten
         try:
             await e.respond(text)
         except Exception:
@@ -81,6 +76,13 @@ async def handler(e):
     except Exception as ex:
         print("Approve error:", ex)
 
+# === Neues Feature: alle Dialoge einmal anzeigen ===
+async def list_dialogs():
+    print("📋 Alle Dialoge/Chats:")
+    async for dialog in client.iter_dialogs():
+        print(f"{dialog.id} | {dialog.title or dialog.name or dialog.entity.username}")
+
 client.start()
+client.loop.run_until_complete(list_dialogs())
 print("Listening…")
 client.run_until_disconnected()
